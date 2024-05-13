@@ -3,6 +3,8 @@ package com.example.miniprojetserviceweb.Controller;
 import com.example.miniprojetserviceweb.Model.Etudiant;
 import com.example.miniprojetserviceweb.Repository.EtudiantRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,57 +17,69 @@ public class EtudiantController {
     private EtudiantRepository etudiantRepository;
 
     @GetMapping("/get")
-    public List<Etudiant> getAllEtudiants() {
-        return etudiantRepository.findAll();
+    public ResponseEntity<List<Etudiant>> getAllEtudiants() {
+        List<Etudiant> etudiants = etudiantRepository.findAll();
+        return new ResponseEntity<>(etudiants, HttpStatus.OK);
     }
 
     @PostMapping("/post")
-    public Etudiant createEtudiant(@RequestBody Etudiant etudiant) {
-        return etudiantRepository.save(etudiant);
+    public ResponseEntity<Etudiant> createEtudiant(@RequestBody Etudiant etudiant) {
+        Etudiant createdEtudiant = etudiantRepository.save(etudiant);
+        return new ResponseEntity<>(createdEtudiant, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public Etudiant getEtudiantById(@PathVariable Long id) {
-        return etudiantRepository.findById(id).orElse(null);
+    public ResponseEntity<Etudiant> getEtudiantById(@PathVariable Long id) {
+        Etudiant etudiant = etudiantRepository.findById(id).orElse(null);
+        if (etudiant != null) {
+            return new ResponseEntity<>(etudiant, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        }
     }
 
     @PutMapping("/{id}")
-    public Etudiant updateEtudiant(@PathVariable Long id, @RequestBody Etudiant etudiantDetails) {
-        Etudiant etudiant = etudiantRepository.findById(id).orElse(null);
-        if (etudiant != null) {
-            etudiant.setNom(etudiantDetails.getNom());
-            etudiant.setPrenom(etudiantDetails.getPrenom());
-            etudiant.setNbAbsences(etudiantDetails.getNbAbsences());
-            etudiant.setReussite(etudiantDetails.isReussite()); // Update exam result or grade
-            return etudiantRepository.save(etudiant);
+    public ResponseEntity<Etudiant> updateEtudiant(@PathVariable Long id, @RequestBody Etudiant etudiantDetails) {
+        Etudiant existingEtudiant = etudiantRepository.findById(id).orElse(null);
+        if (existingEtudiant != null) {
+            existingEtudiant.setNom(etudiantDetails.getNom());
+            existingEtudiant.setPrenom(etudiantDetails.getPrenom());
+            existingEtudiant.setNbAbsences(etudiantDetails.getNbAbsences());
+            existingEtudiant.setReussite(etudiantDetails.isReussite()); // Update exam result or grade
+            Etudiant updatedEtudiant = etudiantRepository.save(existingEtudiant);
+            return new ResponseEntity<>(updatedEtudiant, HttpStatus.OK);
+        } else {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
-        return null;
     }
 
     @DeleteMapping("/{id}")
-    public void deleteEtudiant(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteEtudiant(@PathVariable Long id) {
         etudiantRepository.deleteById(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @GetMapping("/taux-absence")
-    public double getTauxAbsentéisme() {
+    public ResponseEntity<Double> getTauxAbsentéisme() {
         List<Etudiant> etudiants = etudiantRepository.findAll();
         int totalEtudiants = etudiants.size();
         if (totalEtudiants == 0) {
-            return 0.0; // Avoid division by zero
+            return new ResponseEntity<>(0.0, HttpStatus.OK); // Avoid division by zero
         }
-        long totalAbsences = etudiants.stream().filter(e -> e.getNbAbsences()>0).count();
-        return ((double) totalAbsences / totalEtudiants) * 100.0;
+        long totalAbsences = etudiants.stream().filter(e -> e.getNbAbsences() > 0).count();
+        double tauxAbsence = ((double) totalAbsences / totalEtudiants) * 100.0;
+        return new ResponseEntity<>(tauxAbsence, HttpStatus.OK);
     }
 
     @GetMapping("/taux-reussite")
-    public double getTauxRéussite() {
+    public ResponseEntity<Double> getTauxRéussite() {
         List<Etudiant> etudiants = etudiantRepository.findAll();
         int totalEtudiants = etudiants.size();
         if (totalEtudiants == 0) {
-            return 0.0; // Avoid division by zero
+            return new ResponseEntity<>(0.0, HttpStatus.OK); // Avoid division by zero
         }
         long totalReussite = etudiants.stream().filter(Etudiant::isReussite).count();
-        return ((double)totalReussite / totalEtudiants) * 100.0;
+        double tauxReussite = ((double) totalReussite / totalEtudiants) * 100.0;
+        return new ResponseEntity<>(tauxReussite, HttpStatus.OK);
     }
 }
